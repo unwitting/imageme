@@ -36,7 +36,7 @@ def compile_index(dir_path, image_files):
 	print('Index file available at %s' % index_path)
 
 def get_image_files(path):
-	all_files = os.listdir(path)
+	all_files = sorted(os.listdir(path))
 	print('All files:')
 	for f in all_files: print(' ' + f)
 	image_files = [f for f in all_files if re.match(IMAGE_REGEX, f)]
