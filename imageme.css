@@ -1,0 +1,14 @@
+html, body {
+	margin: 0;
+	padding: 0;
+}
+
+.content {
+	padding: 3em;
+	padding-left: 4em;
+	padding-right: 4em;
+}
+
+img {
+	max-width: 100%;
+}
