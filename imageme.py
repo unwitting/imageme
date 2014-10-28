@@ -44,17 +44,17 @@ def get_image_files(path):
 	for f in image_files: print(' ' + f)
 	return image_files
 
-def get_server():
+def run_server():
 	port = get_server_port()
 	server = SocketServer.TCPServer(
 		('', port),
 		SimpleHTTPServer.SimpleHTTPRequestHandler
 	)
-	server.serve_forever()
-	print('Server created, go to http://127.0.0.1:%d/%s' % (
+	print('Your images are at http://127.0.0.1:%d/%s' % (
 		port,
 		INDEX_FILE_NAME
 	))
+	server.serve_forever()
 	return server
 
 def get_server_port():
@@ -65,4 +65,4 @@ if __name__ == '__main__':
 	path = '.'
 	image_files = get_image_files(path)
 	compile_index(path, image_files)
-	server = get_server()
+	run_server()
