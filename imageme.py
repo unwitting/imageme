@@ -95,12 +95,13 @@ def run_server():
 	server.serve_forever()
 	return server
 
-created_files = create_index_files('.')
-try:
-	run_server()
-except KeyboardInterrupt:
-	print('User interrupted, stopping')
-except Exception as e:
-	print(e)
-	print('Unhandled exception in server, stopping')
-clean_up(created_files)
+if __name__ == '__main__':
+	created_files = create_index_files('.')
+	try:
+		run_server()
+	except KeyboardInterrupt:
+		print('User interrupted, stopping')
+	except Exception as e:
+		print(e)
+		print('Unhandled exception in server, stopping')
+	clean_up(created_files)
