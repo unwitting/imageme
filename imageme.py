@@ -78,9 +78,13 @@ def clean_up(paths):
 def create_index_files(root_dir):
 	created_files = []
 	for here, dirs, files in os.walk(root_dir):
+		dirs = sorted(dirs)
 		print('Processing %s' % here)
 		image_files = [f for f in files if re.match(IMAGE_FILE_REGEX, f)]
-		created_files.append(_create_index_file(root_dir, here, image_files, dirs))
+		image_files = sorted(image_files)
+		created_files.append(
+			_create_index_file(root_dir, here, image_files, dirs)
+		)
 	return created_files
 
 def run_server():
