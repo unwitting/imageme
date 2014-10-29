@@ -66,7 +66,7 @@ def _get_index_file_path(location):
 	return os.path.join(location, INDEX_FILE_NAME)
 
 def _get_server_port():
-	port = int(sys.argv[1]) if len(sys.argv) > 2 else 8000
+	port = int(sys.argv[1]) if len(sys.argv) >= 2 else 8000
 	return port
 
 def clean_up(paths):
