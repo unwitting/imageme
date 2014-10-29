@@ -4,7 +4,7 @@ imageMe is a super simple image gallery server.
 
 Think `python -m SimpleHTTPServer` for pictures.
 
-## Super-duper Easy One-Line Usage
+## Super Duper Easy One Line Usage
 
 To run the image server on port 8000:
 
