@@ -14,7 +14,7 @@ curl https://raw.githubusercontent.com/unwitting/imageme/master/imageme.py | pyt
 
 ## Manual Usage
 
-### Step 1: Get the file
+### Step 1: Get the File
 
 Get hold of a copy of `imageme.py`. For _really_ easy use put it in your `PATH`.
 
@@ -59,6 +59,6 @@ Processing .
 Your images are at http://127.0.0.1:5678/imageme.html
 ```
 
-### Step 3: Browse and enjoy
+## Browse and Enjoy
 
 Hit the URL imageMe tells you in your browser, and have fun exploring.
