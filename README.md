@@ -4,7 +4,7 @@ imageMe is a super simple image gallery server.
 
 Think `python -m SimpleHTTPServer` for pictures.
 
-![](http://unwitting.github.io/imageme/images/screenshots/image_index.png)
+![](http://www.imageme.xyz/images/screenshots/image_index.png)
 
 ## Super Duper Easy One Line Usage
 
