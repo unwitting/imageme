@@ -16,6 +16,7 @@ def _create_index_file(root_dir, location, image_files, dirs):
 		'			.header {text-align: right;}',
 		'			.content {padding: 3em;	padding-left: 4em; padding-right: 4em;}',
 		'			.image {max-width: 100%; border-radius: 0.3em;}',
+		'			td {width: ' + str(100.0 / IMAGES_PER_ROW) + '%;}',
 		'		</style>',
 		'	</head>',
 		'	<body>',
