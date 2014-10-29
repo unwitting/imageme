@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import os, re, sys, SimpleHTTPServer, SocketServer
 
 INDEX_FILE_NAME = 'imageme.html'
