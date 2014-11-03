@@ -42,6 +42,8 @@ def _create_index_file(root_dir, location, image_files, dirs):
     """
     # Put together HTML as a list of the lines we'll want to include
     # Issue #2 exists to do this better than HTML in-code
+    header_text = \
+        'imageMe: ' + location + ' [' + str(len(image_files)) + ' image(s)]'
     html = [
         '<!DOCTYPE html>',
         '<html>',
@@ -50,20 +52,25 @@ def _create_index_file(root_dir, location, image_files, dirs):
         '        <style>',
         '            html, body {margin: 0;padding: 0;}',
         '            .header {text-align: right;}',
-        '            .content {padding: 3em;    padding-left: 4em; padding-right: 4em;}',
+        '            .content {',
+        '                padding: 3em;',
+        '                padding-left: 4em;',
+        '                padding-right: 4em;',
+        '            }',
         '            .image {max-width: 100%; border-radius: 0.3em;}',
         '            td {width: ' + str(100.0 / IMAGES_PER_ROW) + '%;}',
         '        </style>',
         '    </head>',
         '    <body>',
         '    <div class="content">',
-        '        <h2 class="header">imageMe: ' + location + ' [' + str(len(image_files)) + ' image(s)]</h2>',
+        '        <h2 class="header">' + header_text + '</h2>',
         '        <hr>'
     ]
     # Populate the present subdirectories - this includes '..' unless we're at
     # the top level
     directories = []
-    if root_dir != location: directories = ['..']
+    if root_dir != location:
+        directories = ['..']
     directories += dirs
     # For each subdirectory, include a link to its index file
     for directory in directories:
@@ -79,7 +86,8 @@ def _create_index_file(root_dir, location, image_files, dirs):
     html += ['<hr>', '<table>']
     # For each image file, potentially create a new <tr> and create a new <td>
     for image_file in image_files:
-        if table_row_count == 1: html.append('<tr>')
+        if table_row_count == 1:
+            html.append('<tr>')
         html += [
             '    <td>',
             '    <a href="' + image_file + '">',
@@ -205,10 +213,10 @@ def run_server():
         # This is the expected way of the server being killed, since imageMe is
         # intended for ad-hoc running from command line
         print('User interrupted, stopping')
-    except Exception as e:
+    except Exception as exptn:
         # Catch everything else - this will handle shutdowns via other signals
         # and faults actually starting the server in the first place
-        print(e)
+        print(exptn)
         print('Unhandled exception in server, stopping')
 
 def serve_dir(dir_path):
