@@ -31,6 +31,8 @@ def _create_index_file(root_dir, location, image_files, dirs):
 	@return {String} The full path (location plus filename) of the newly
 		created index file. Intended for usage cleaning up created files.
 	"""
+	# Put together HTML as a list of the lines we'll want to include
+	# Issue #2 exists to do this better than HTML in-code
 	html = [
 		'<!DOCTYPE html>',
 		'<html>',
@@ -49,9 +51,12 @@ def _create_index_file(root_dir, location, image_files, dirs):
 		'		<h2 class="header">imageMe: ' + location + ' [' + str(len(image_files)) + ' image(s)]</h2>',
 		'		<hr>'
 	]
+	# Populate the present subdirectories - this includes '..' unless we're at
+	# the top level
 	directories = []
 	if root_dir != location: directories = ['..']
 	directories += dirs
+	# For each subdirectory, include a link to its index file
 	for directory in directories:
 		link = directory + '/' + INDEX_FILE_NAME
 		html += [
@@ -59,8 +64,11 @@ def _create_index_file(root_dir, location, image_files, dirs):
 			'	<a href="' + link + '">' + directory + '</a>',
 			'	</h3>'
 		]
+	# Populate the image gallery table
+	# Counter to cycle down through table rows
 	table_row_count = 1
 	html += ['<hr>', '<table>']
+	# For each image file, potentially create a new <tr> and create a new <td>
 	for image_file in image_files:
 		if table_row_count == 1: html.append('<tr>')
 		html += [
@@ -80,11 +88,13 @@ def _create_index_file(root_dir, location, image_files, dirs):
 		'	</body>',
 		'</html>'
 	]
+	# Actually create the file, now we've put together the HTML content
 	index_file_path = _get_index_file_path(location)
 	print('Creating index file %s' % index_file_path)
 	index_file = open(index_file_path, 'w')
 	index_file.write('\n'.join(html))
 	index_file.close()
+	# Return the path for cleaning up later
 	return index_file_path
 
 def _get_index_file_path(location):
@@ -107,8 +117,7 @@ def _get_server_port():
 	@return {Integer} The port to run the server on. Default 8000, overridden
 		by first command line argument.
 	"""
-	port = int(sys.argv[1]) if len(sys.argv) >= 2 else 8000
-	return port
+	return int(sys.argv[1]) if len(sys.argv) >= 2 else 8000
 
 def clean_up(paths):
 	"""
@@ -120,6 +129,7 @@ def clean_up(paths):
 	@return {None}
 	"""
 	print('Cleaning up')
+	# Iterate over the given paths, unlinking them
 	for path in paths:
 		print('Removing %s' % path)
 		os.unlink(path)
@@ -134,15 +144,23 @@ def create_index_files(root_dir):
 
 	@return {[String]} Full file paths of all created files.
 	"""
+	# Initialise list of created file paths to build up as we make them
 	created_files = []
+	# Walk the root dir downwards, creating index files as we go
 	for here, dirs, files in os.walk(root_dir):
-		dirs = sorted(dirs)
 		print('Processing %s' % here)
+		# Sort the subdirectories by name
+		dirs = sorted(dirs)
+		# Get image files - all files in the directory matching IMAGE_FILE_REGEX
 		image_files = [f for f in files if re.match(IMAGE_FILE_REGEX, f)]
+		# Sort the image files by name
 		image_files = sorted(image_files)
+		# Create this directory's index file and add its name to the created
+		# files list
 		created_files.append(
 			_create_index_file(root_dir, here, image_files, dirs)
 		)
+	# Return the list of created files
 	return created_files
 
 def run_server():
@@ -153,25 +171,54 @@ def run_server():
 
 	@return {None}
 	"""
+	# Get the port to run on
 	port = _get_server_port()
+	# Configure allow_reuse_address to make re-runs of the script less painful -
+	# if this is not True then waiting for the address to be freed after the
+	# last run can block a subsequent run
 	SocketServer.TCPServer.allow_reuse_address = True
+	# Create the server instance
 	server = SocketServer.TCPServer(
 		('', port),
 		SimpleHTTPServer.SimpleHTTPRequestHandler
 	)
+	# Print out before actually running the server (cheeky / optimistic, however
+	# you want to look at it)
 	print('Your images are at http://127.0.0.1:%d/%s' % (
 		port,
 		INDEX_FILE_NAME
 	))
+	# Try to run the server
 	try:
+		# Run it - this call blocks until the server is killed
 		server.serve_forever()
 	except KeyboardInterrupt:
+		# This is the expected way of the server being killed, since imageMe is
+		# intended for ad-hoc running from command line
 		print('User interrupted, stopping')
 	except Exception as e:
+		# Catch everything else - this will handle shutdowns via other signals
+		# and faults actually starting the server in the first place
 		print(e)
 		print('Unhandled exception in server, stopping')
 
-if __name__ == '__main__':
-	created_files = create_index_files('.')
+def serve_dir(dir_path):
+	"""
+	Generate indexes and run server from the given directory downwards.
+
+	@param {String} dir_path - The directory path (absolute, or relative to CWD)
+
+	@return {None}
+	"""
+	# Create index files, and store the list of their paths for cleanup later
+	created_files = create_index_files(dir_path)
+	# Run the server in the current location - this blocks until it's stopped
 	run_server()
+	# Clean up the index files created earlier so we don't make a mess of
+	# the image directories
 	clean_up(created_files)
+
+if __name__ == '__main__':
+	# Generate indices and serve from the current directory downwards when run
+	# as the entry point
+	serve_dir('.')
