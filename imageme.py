@@ -1,4 +1,13 @@
 #!/usr/bin/python
+"""
+imageMe is a super simple image gallery server.
+
+Run imageme.py from the top level of an image directory so generate gallery
+index HTML and run a SimpleHTTPServer on the localhost.
+
+Imported as a module, use serve_dir(your_path) to do the same for any directory
+programmatically.
+"""
 
 # Dependencies
 import os, re, sys, SimpleHTTPServer, SocketServer
