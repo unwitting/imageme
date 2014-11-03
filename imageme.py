@@ -2,11 +2,12 @@
 """
 imageMe is a super simple image gallery server.
 
-Run imageme.py from the top level of an image directory so generate gallery
+Run imageme.py from the top level of an image directory to generate gallery
 index HTML and run a SimpleHTTPServer on the localhost.
 
-Imported as a module, use serve_dir(your_path) to do the same for any directory
-programmatically.
+Imported as a module, use imageme.serve_dir(your_path) to do the same for any
+directory programmatically. When run as entry point, imageme.serve_dir('.') is
+what's called.
 """
 
 # Dependencies
@@ -19,6 +20,21 @@ INDEX_FILE_NAME = 'imageme.html'
 IMAGE_FILE_REGEX = '^.+\.(png|jpg|jpeg|tif|tiff|gif|bmp)$'
 ## Images per row of the gallery tables
 IMAGES_PER_ROW = 3
+
+def _clean_up(paths):
+    """
+    Clean up after ourselves, removing created files.
+
+    @param {[String]} A list of file paths specifying the files we've created
+        during run. Will all be deleted.
+
+    @return {None}
+    """
+    print('Cleaning up')
+    # Iterate over the given paths, unlinking them
+    for path in paths:
+        print('Removing %s' % path)
+        os.unlink(path)
 
 def _create_index_file(root_dir, location, image_files, dirs):
     """
@@ -114,44 +130,7 @@ def _create_index_file(root_dir, location, image_files, dirs):
     # Return the path for cleaning up later
     return index_file_path
 
-def _get_index_file_path(location):
-    """
-    Get the full file path to be used for an index file in the given location.
-    Yields location plus the constant INDEX_FILE_NAME.
-
-    @param {String} location - A directory location in which we want to create
-        a new index file.
-
-    @return {String} A file path for usage with a new index file.
-    """
-    return os.path.join(location, INDEX_FILE_NAME)
-
-def _get_server_port():
-    """
-    Get the port specified for the server to run on. If given as the first
-    command line argument, we'll use that. Else we'll default to 8000.
-
-    @return {Integer} The port to run the server on. Default 8000, overridden
-        by first command line argument.
-    """
-    return int(sys.argv[1]) if len(sys.argv) >= 2 else 8000
-
-def clean_up(paths):
-    """
-    Clean up after ourselves, removing created files.
-
-    @param {[String]} A list of file paths specifying the files we've created
-        during run. Will all be deleted.
-
-    @return {None}
-    """
-    print('Cleaning up')
-    # Iterate over the given paths, unlinking them
-    for path in paths:
-        print('Removing %s' % path)
-        os.unlink(path)
-
-def create_index_files(root_dir):
+def _create_index_files(root_dir):
     """
     Crawl the root directory downwards, generating an index HTML file in each
     directory on the way down.
@@ -180,7 +159,29 @@ def create_index_files(root_dir):
     # Return the list of created files
     return created_files
 
-def run_server():
+def _get_index_file_path(location):
+    """
+    Get the full file path to be used for an index file in the given location.
+    Yields location plus the constant INDEX_FILE_NAME.
+
+    @param {String} location - A directory location in which we want to create
+        a new index file.
+
+    @return {String} A file path for usage with a new index file.
+    """
+    return os.path.join(location, INDEX_FILE_NAME)
+
+def _get_server_port():
+    """
+    Get the port specified for the server to run on. If given as the first
+    command line argument, we'll use that. Else we'll default to 8000.
+
+    @return {Integer} The port to run the server on. Default 8000, overridden
+        by first command line argument.
+    """
+    return int(sys.argv[1]) if len(sys.argv) >= 2 else 8000
+
+def _run_server():
     """
     Run the image server. This is blocking. Will handle user KeyboardInterrupt
     and other exceptions appropriately and return control once the server is
@@ -228,12 +229,12 @@ def serve_dir(dir_path):
     @return {None}
     """
     # Create index files, and store the list of their paths for cleanup later
-    created_files = create_index_files(dir_path)
+    created_files = _create_index_files(dir_path)
     # Run the server in the current location - this blocks until it's stopped
-    run_server()
+    _run_server()
     # Clean up the index files created earlier so we don't make a mess of
     # the image directories
-    clean_up(created_files)
+    _clean_up(created_files)
 
 if __name__ == '__main__':
     # Generate indices and serve from the current directory downwards when run
