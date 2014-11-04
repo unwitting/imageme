@@ -34,7 +34,7 @@ IMAGE_FILE_REGEX = '^.+\.(png|jpg|jpeg|tif|tiff|gif|bmp)$'
 ## Images per row of the gallery tables
 IMAGES_PER_ROW = 3
 ## Resampling mode to use when thumbnailing
-RESAMPLE = Image.NEAREST
+RESAMPLE = None if Image is None else Image.NEAREST
 ## Width in pixels of thumnbails generated with PIL
 THUMBNAIL_WIDTH = 800
 
