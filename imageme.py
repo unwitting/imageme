@@ -33,6 +33,8 @@ INDEX_FILE_NAME = 'imageme.html'
 IMAGE_FILE_REGEX = '^.+\.(png|jpg|jpeg|tif|tiff|gif|bmp)$'
 ## Images per row of the gallery tables
 IMAGES_PER_ROW = 3
+## Resampling mode to use when thumbnailing
+RESAMPLE = Image.NEAREST
 ## Width in pixels of thumnbails generated with PIL
 THUMBNAIL_WIDTH = 800
 
@@ -270,7 +272,7 @@ def _get_thumbnail_image_from_file(dir_path, image_file):
     # Get image
     img = _get_image_from_file(dir_path, image_file)
     # If it's not supported, exit now
-    if img is None:
+    if img is None or img.format.lower() == 'gif':
         return None
     # Get image dimensions
     img_width, img_height = img.size
@@ -280,7 +282,13 @@ def _get_thumbnail_image_from_file(dir_path, image_file):
     # Work out target image height based on the scale ratio
     target_height = int(scale_ratio * img_height)
     # Perform the resize
-    img.thumbnail((THUMBNAIL_WIDTH, target_height))
+    try:
+        img.thumbnail((THUMBNAIL_WIDTH, target_height), resample=RESAMPLE)
+    except IOError as exptn:
+        print('WARNING: IOError when thumbnailing %s/%s: %s' % (
+            dir_path, image_file, exptn
+        ))
+        return None
     # Return the resized image
     return img
 
