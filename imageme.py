@@ -11,7 +11,20 @@ what's called.
 """
 
 # Dependencies
-import os, re, sys, SimpleHTTPServer, SocketServer
+import base64, io, os, re, sys, SimpleHTTPServer, SocketServer
+# Attempt to import PIL - if it doesn't exist we won't be able to make use of
+# some performance enhancing goodness, but imageMe will still work fine
+Image = None
+try:
+    print('Attempting to import from PIL...')
+    from PIL import Image
+    print('Success! Enjoy your supercharged imageMe.')
+except ImportError:
+    print(
+        'WARNING: \'PIL\' module not found, so you won\'t get all the ' +\
+        'performance you could out of imageMe. Install Pillow (' +\
+        'https://github.com/python-pillow/Pillow) to enable support.'
+    )
 
 # Constants / configuration
 ## Filename of the generated index files
@@ -20,6 +33,8 @@ INDEX_FILE_NAME = 'imageme.html'
 IMAGE_FILE_REGEX = '^.+\.(png|jpg|jpeg|tif|tiff|gif|bmp)$'
 ## Images per row of the gallery tables
 IMAGES_PER_ROW = 3
+## Width in pixels of thumnbails generated with PIL
+THUMBNAIL_WIDTH = 800
 
 def _clean_up(paths):
     """
@@ -104,10 +119,11 @@ def _create_index_file(root_dir, location, image_files, dirs):
     for image_file in image_files:
         if table_row_count == 1:
             html.append('<tr>')
+        img_src = _get_img_src_from_file(location, image_file)
         html += [
             '    <td>',
             '    <a href="' + image_file + '">',
-            '        <img class="image" src="' + image_file + '">',
+            '        <img class="image" src="' + img_src + '">',
             '    </a>',
             '    </td>'
         ]
@@ -159,6 +175,63 @@ def _create_index_files(root_dir):
     # Return the list of created files
     return created_files
 
+def _get_image_from_file(dir_path, image_file):
+    """
+    Get an instance of PIL.Image from the given file.
+
+    @param {String} dir_path - The directory containing the image file
+
+    @param {String} image_file - The filename of the image file within dir_path
+
+    @return {PIL.Image} An instance of the image file as a PIL Image, or None
+        if the functionality is not available. This could be because PIL is not
+        present, or because it can't process the given file type.
+    """
+    # Save ourselves the effort if PIL is not present, and return None now
+    if Image is None:
+        return None
+    # Put together full path
+    path = os.path.join(dir_path, image_file)
+    # Try to read the image
+    img = None
+    try:
+        img = Image.open(path)
+    except IOError as exptn:
+        print('Error loading image file %s: %s' % (path, exptn))
+    # Return image or None
+    return img
+
+def _get_img_src_from_file(dir_path, image_file):
+    """
+    Get base-64 encoded data as a string for the given image file's thumbnail,
+    for use directly in HTML <img> tags, or a path to the original if image
+    scaling is not supported.
+
+    @param {String} dir_path - The directory containing the image file
+
+    @param {String} image_file - The filename of the image file within dir_path
+
+    @return {String} The base-64 encoded image data string, or path to the file
+        itself if not supported.
+    """
+    # First try to get a thumbnail image
+    img = _get_thumbnail_image_from_file(dir_path, image_file)
+    # If the image is None, then PIL is not supported, so we should return a
+    # path to the file itself
+    if img is None:
+        return image_file
+    # If we have an actual Image, great - put together the base64 image string
+    # First things first, get the base64 encoded bytes for the image
+    try:
+        bytesio = io.BytesIO()
+        img.save(bytesio, img.format)
+        bytes = bytesio.getvalue()
+        b64 = base64.b64encode(bytes)
+        return 'data:image/%s;base64,%s' % (img.format.lower(), b64)
+    except Exception as exptn:
+        print('Exception while saving image bytes: %s' % exptn)
+        return image_file
+
 def _get_index_file_path(location):
     """
     Get the full file path to be used for an index file in the given location.
@@ -180,6 +253,36 @@ def _get_server_port():
         by first command line argument.
     """
     return int(sys.argv[1]) if len(sys.argv) >= 2 else 8000
+
+def _get_thumbnail_image_from_file(dir_path, image_file):
+    """
+    Get a PIL.Image from the given image file which has been scaled down to
+    THUMBNAIL_WIDTH wide.
+
+    @param {String} dir_path - The directory containing the image file
+
+    @param {String} image_file - The filename of the image file within dir_path
+
+    @return {PIL.Image} An instance of the thumbnail as a PIL Image, or None
+        if the functionality is not available. See _get_image_from_file for
+        details.
+    """
+    # Get image
+    img = _get_image_from_file(dir_path, image_file)
+    # If it's not supported, exit now
+    if img is None:
+        return None
+    # Get image dimensions
+    img_width, img_height = img.size
+    # We need to perform a resize - first, work out the scale ratio to take the
+    # image width to THUMBNAIL_WIDTH (THUMBNAIL_WIDTH:img_width ratio)
+    scale_ratio = THUMBNAIL_WIDTH / float(img_width)
+    # Work out target image height based on the scale ratio
+    target_height = int(scale_ratio * img_height)
+    # Perform the resize
+    img.thumbnail((THUMBNAIL_WIDTH, target_height))
+    # Return the resized image
+    return img
 
 def _run_server():
     """
