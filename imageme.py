@@ -227,8 +227,8 @@ def _get_img_src_from_file(dir_path, image_file):
     try:
         bytesio = io.BytesIO()
         img.save(bytesio, img.format)
-        bytes = bytesio.getvalue()
-        b64 = base64.b64encode(bytes)
+        byte_value = bytesio.getvalue()
+        b64 = base64.b64encode(byte_value)
         return 'data:image/%s;base64,%s' % (img.format.lower(), b64)
     except Exception as exptn:
         print('Exception while saving image bytes: %s' % exptn)
