@@ -14,10 +14,11 @@ what's called.
 import base64, io, os, re, sys, SimpleHTTPServer, SocketServer
 # Attempt to import PIL - if it doesn't exist we won't be able to make use of
 # some performance enhancing goodness, but imageMe will still work fine
-Image = None
+PIL_ENABLED = False
 try:
     print('Attempting to import from PIL...')
     from PIL import Image
+    PIL_ENABLED = True
     print('Success! Enjoy your supercharged imageMe.')
 except ImportError:
     print(
@@ -34,7 +35,7 @@ IMAGE_FILE_REGEX = '^.+\.(png|jpg|jpeg|tif|tiff|gif|bmp)$'
 ## Images per row of the gallery tables
 IMAGES_PER_ROW = 3
 ## Resampling mode to use when thumbnailing
-RESAMPLE = None if Image is None else Image.NEAREST
+RESAMPLE = None if not PIL_ENABLED else Image.NEAREST
 ## Width in pixels of thumnbails generated with PIL
 THUMBNAIL_WIDTH = 800
 
@@ -190,7 +191,7 @@ def _get_image_from_file(dir_path, image_file):
         present, or because it can't process the given file type.
     """
     # Save ourselves the effort if PIL is not present, and return None now
-    if Image is None:
+    if not PIL_ENABLED:
         return None
     # Put together full path
     path = os.path.join(dir_path, image_file)
