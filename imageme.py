@@ -11,7 +11,7 @@ what's called.
 """
 
 # Dependencies
-import base64, io, os, re, sys, SimpleHTTPServer, SocketServer
+import base64, io, os, re, sys, threading, SimpleHTTPServer, SocketServer
 # Attempt to import PIL - if it doesn't exist we won't be able to make use of
 # some performance enhancing goodness, but imageMe will still work fine
 PIL_ENABLED = False
@@ -39,6 +39,19 @@ RESAMPLE = None if not PIL_ENABLED else Image.NEAREST
 ## Width in pixels of thumnbails generated with PIL
 THUMBNAIL_WIDTH = 800
 
+class BackgroundIndexFileGenerator:
+
+    def __init__(self, dir_path):
+        self.dir_path = dir_path
+        self.thread = threading.Thread(target=self._process, args=())
+        self.thread.daemon = True
+
+    def _process(self):
+        _create_index_files(self.dir_path)
+
+    def run(self):
+        self.thread.start()
+
 def _clean_up(paths):
     """
     Clean up after ourselves, removing created files.
@@ -54,7 +67,8 @@ def _clean_up(paths):
         print('Removing %s' % path)
         os.unlink(path)
 
-def _create_index_file(root_dir, location, image_files, dirs):
+def _create_index_file(
+        root_dir, location, image_files, dirs, force_no_processing=False):
     """
     Create an index file in the given location, supplying known lists of
     present image files and subdirectories.
@@ -70,6 +84,10 @@ def _create_index_file(root_dir, location, image_files, dirs):
 
     @param {[String]} dirs - The subdirectories of the location directory.
         These will be displayed as links further down the file structure.
+
+    @param {Boolean=False} force_no_processing - If True, do not attempt to
+        actually process thumbnails, PIL images or anything. Simply index
+        <img> tags with original file src attributes.
 
     @return {String} The full path (location plus filename) of the newly
         created index file. Intended for usage cleaning up created files.
@@ -122,7 +140,9 @@ def _create_index_file(root_dir, location, image_files, dirs):
     for image_file in image_files:
         if table_row_count == 1:
             html.append('<tr>')
-        img_src = _get_img_src_from_file(location, image_file)
+        img_src = _get_img_src_from_file(
+            location, image_file, force_no_processing
+        )
         html += [
             '    <td>',
             '    <a href="' + image_file + '">',
@@ -149,13 +169,17 @@ def _create_index_file(root_dir, location, image_files, dirs):
     # Return the path for cleaning up later
     return index_file_path
 
-def _create_index_files(root_dir):
+def _create_index_files(root_dir, force_no_processing=False):
     """
     Crawl the root directory downwards, generating an index HTML file in each
     directory on the way down.
 
     @param {String} root_dir - The top level directory to crawl down from. In
         normal usage, this will be '.'.
+
+    @param {Boolean=False} force_no_processing - If True, do not attempt to
+        actually process thumbnails, PIL images or anything. Simply index
+        <img> tags with original file src attributes.
 
     @return {[String]} Full file paths of all created files.
     """
@@ -173,7 +197,9 @@ def _create_index_files(root_dir):
         # Create this directory's index file and add its name to the created
         # files list
         created_files.append(
-            _create_index_file(root_dir, here, image_files, dirs)
+            _create_index_file(
+                root_dir, here, image_files, dirs, force_no_processing
+            )
         )
     # Return the list of created files
     return created_files
@@ -204,7 +230,7 @@ def _get_image_from_file(dir_path, image_file):
     # Return image or None
     return img
 
-def _get_img_src_from_file(dir_path, image_file):
+def _get_img_src_from_file(dir_path, image_file, force_no_processing=False):
     """
     Get base-64 encoded data as a string for the given image file's thumbnail,
     for use directly in HTML <img> tags, or a path to the original if image
@@ -214,9 +240,16 @@ def _get_img_src_from_file(dir_path, image_file):
 
     @param {String} image_file - The filename of the image file within dir_path
 
+    @param {Boolean=False} force_no_processing - If True, do not attempt to
+        actually process a thumbnail, PIL image or anything. Simply return the
+        image filename as src.
+
     @return {String} The base-64 encoded image data string, or path to the file
         itself if not supported.
     """
+    # If we've specified to force no processing, just return the image filename
+    if force_no_processing:
+        return image_file
     # First try to get a thumbnail image
     img = _get_thumbnail_image_from_file(dir_path, image_file)
     # If the image is None, then PIL is not supported, so we should return a
@@ -341,7 +374,18 @@ def serve_dir(dir_path):
     @return {None}
     """
     # Create index files, and store the list of their paths for cleanup later
-    created_files = _create_index_files(dir_path)
+    # This time, force no processing - this gives us a fast first-pass in terms
+    # of page generation, but potentially slow serving for large image files
+    print('Performing first pass index file generation')
+    created_files = _create_index_files(dir_path, True)
+    if (PIL_ENABLED):
+        # If PIL is enabled, we'd like to process the HTML indexes to include
+        # generated thumbnails - this slows down generation so we don't do it
+        # first time around, but now we're serving it's good to do in the
+        # background
+        print('Performing PIL-enchanced optimised index file generation in background')
+        background_indexer = BackgroundIndexFileGenerator(dir_path)
+        background_indexer.run()
     # Run the server in the current location - this blocks until it's stopped
     _run_server()
     # Clean up the index files created earlier so we don't make a mess of
