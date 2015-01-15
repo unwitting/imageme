@@ -115,8 +115,7 @@ def _create_index_file(
         '    </head>',
         '    <body>',
         '    <div class="content">',
-        '        <h2 class="header">' + header_text + '</h2>',
-        '        <hr>'
+        '        <h2 class="header">' + header_text + '</h2>'
     ]
     # Populate the present subdirectories - this includes '..' unless we're at
     # the top level
@@ -124,6 +123,8 @@ def _create_index_file(
     if root_dir != location:
         directories = ['..']
     directories += dirs
+    if len(directories) > 0:
+        html.append('<hr>')
     # For each subdirectory, include a link to its index file
     for directory in directories:
         link = directory + '/' + INDEX_FILE_NAME
