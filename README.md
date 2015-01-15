@@ -11,7 +11,7 @@ Think `python -m SimpleHTTPServer` for pictures.
 To run the image server on port 8000:
 
 ```bash
-curl https://raw.githubusercontent.com/unwitting/imageme/master/imageme.py | python
+curl https://cdn.rawgit.com/unwitting/imageme/master/imageme.py | python
 ```
 
 ## Manual Usage
@@ -29,7 +29,7 @@ You could clone this repo:
 Or just grab the file directly:
 
 ```bash
-> wget https://raw.githubusercontent.com/unwitting/imageme/master/imageme.py
+> wget https://cdn.rawgit.com/unwitting/imageme/master/imageme.py
 ```
 
 ### Step 2: Run imageMe
