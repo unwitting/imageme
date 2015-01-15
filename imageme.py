@@ -337,7 +337,6 @@ def _get_src_from_image(img, fallback_image_file):
     if target_format.lower() in ['tif', 'tiff']:
         target_format = 'JPEG'
     # If we have an actual Image, great - put together the base64 image string
-    # First things first, get the base64 encoded bytes for the image
     try:
         bytesio = io.BytesIO()
         img.save(bytesio, target_format)
