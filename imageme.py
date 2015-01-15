@@ -140,12 +140,15 @@ def _create_index_file(
     for image_file in image_files:
         if table_row_count == 1:
             html.append('<tr>')
-        img_src = _get_img_src_from_file(
+        img_src = _get_thumbnail_src_from_file(
+            location, image_file, force_no_processing
+        )
+        link_target = _get_image_link_target_from_file(
             location, image_file, force_no_processing
         )
         html += [
             '    <td>',
-            '    <a href="' + image_file + '">',
+            '    <a href="' + link_target + '">',
             '        <img class="image" src="' + img_src + '">',
             '    </a>',
             '    </td>'
@@ -230,11 +233,45 @@ def _get_image_from_file(dir_path, image_file):
     # Return image or None
     return img
 
-def _get_img_src_from_file(dir_path, image_file, force_no_processing=False):
+def _get_image_link_target_from_file(dir_path, image_file, force_no_processing=False):
     """
-    Get base-64 encoded data as a string for the given image file's thumbnail,
+    Get the value to be used as the href for links from thumbnail images. For
+    most image formats this will simply be the image file name itself. However,
+    some image formats (tif) are not natively displayable by many browsers and
+    therefore we must link to image data in another format.
+
+    @param {String} dir_path - The directory containing the image file
+
+    @param {String} image_file - The filename of the image file within dir_path
+
+    @param {Boolean=False} force_no_processing - If True, do not attempt to
+        actually process a thumbnail, PIL image or anything. Simply return the
+        image filename as src.
+
+    @return {String} The href to use.
+    """
+    # If we've specified to force no processing, just return the image filename
+    if force_no_processing:
+        return image_file
+    # First try to get an image
+    img = _get_image_from_file(dir_path, image_file)
+    # If format is directly displayable in-browser, just return the filename
+    # Else, we need to return a full-sized chunk of displayable image data
+    if img.format.lower() in ['tif', 'tiff']:
+        return _get_image_src_from_file(
+            dir_path, image_file, force_no_processing
+        )
+    return image_file
+
+def _get_image_src_from_file(dir_path, image_file, force_no_processing=False):
+    """
+    Get base-64 encoded data as a string for the given image file's full image,
     for use directly in HTML <img> tags, or a path to the original if image
     scaling is not supported.
+
+    This is a full-sized version of _get_thumbnail_src_from_file, for use in
+    image formats which cannot be displayed directly in-browser, and therefore
+    need processed versions even at full size.
 
     @param {String} dir_path - The directory containing the image file
 
@@ -250,23 +287,9 @@ def _get_img_src_from_file(dir_path, image_file, force_no_processing=False):
     # If we've specified to force no processing, just return the image filename
     if force_no_processing:
         return image_file
-    # First try to get a thumbnail image
-    img = _get_thumbnail_image_from_file(dir_path, image_file)
-    # If the image is None, then PIL is not supported, so we should return a
-    # path to the file itself
-    if img is None:
-        return image_file
-    # If we have an actual Image, great - put together the base64 image string
-    # First things first, get the base64 encoded bytes for the image
-    try:
-        bytesio = io.BytesIO()
-        img.save(bytesio, img.format)
-        byte_value = bytesio.getvalue()
-        b64 = base64.b64encode(byte_value)
-        return 'data:image/%s;base64,%s' % (img.format.lower(), b64)
-    except IOError as exptn:
-        print('IOError while saving image bytes: %s' % exptn)
-        return image_file
+    # First try to get an image
+    img = _get_image_from_file(dir_path, image_file)
+    return _get_src_from_image(img, image_file)
 
 def _get_index_file_path(location):
     """
@@ -289,6 +312,41 @@ def _get_server_port():
         by first command line argument.
     """
     return int(sys.argv[1]) if len(sys.argv) >= 2 else 8000
+
+def _get_src_from_image(img, fallback_image_file):
+    """
+    Get base-64 encoded data as a string for the given image. Fallback to return
+    fallback_image_file if cannot get the image data or img is None.
+
+    @param {Image} img - The PIL Image to get src data for
+
+    @param {String} fallback_image_file - The filename of the image file,
+        to be used when image data capture fails
+
+    @return {String} The base-64 encoded image data string, or path to the file
+        itself if not supported.
+    """
+    # If the image is None, then we can't process, so we should return the
+    # path to the file itself
+    if img is None:
+        return fallback_image_file
+    # Target format should be the same as the original image format, unless it's
+    # a TIF/TIFF, which can't be displayed by most browsers; we convert these
+    # to jpeg
+    target_format = img.format
+    if target_format.lower() in ['tif', 'tiff']:
+        target_format = 'JPEG'
+    # If we have an actual Image, great - put together the base64 image string
+    # First things first, get the base64 encoded bytes for the image
+    try:
+        bytesio = io.BytesIO()
+        img.save(bytesio, target_format)
+        byte_value = bytesio.getvalue()
+        b64 = base64.b64encode(byte_value)
+        return 'data:image/%s;base64,%s' % (target_format.lower(), b64)
+    except IOError as exptn:
+        print('IOError while saving image bytes: %s' % exptn)
+        return fallback_image_file
 
 def _get_thumbnail_image_from_file(dir_path, image_file):
     """
@@ -325,6 +383,30 @@ def _get_thumbnail_image_from_file(dir_path, image_file):
         return None
     # Return the resized image
     return img
+
+def _get_thumbnail_src_from_file(dir_path, image_file, force_no_processing=False):
+    """
+    Get base-64 encoded data as a string for the given image file's thumbnail,
+    for use directly in HTML <img> tags, or a path to the original if image
+    scaling is not supported.
+
+    @param {String} dir_path - The directory containing the image file
+
+    @param {String} image_file - The filename of the image file within dir_path
+
+    @param {Boolean=False} force_no_processing - If True, do not attempt to
+        actually process a thumbnail, PIL image or anything. Simply return the
+        image filename as src.
+
+    @return {String} The base-64 encoded image data string, or path to the file
+        itself if not supported.
+    """
+    # If we've specified to force no processing, just return the image filename
+    if force_no_processing:
+        return image_file
+    # First try to get a thumbnail image
+    img = _get_thumbnail_image_from_file(dir_path, image_file)
+    return _get_src_from_image(img, image_file)
 
 def _run_server():
     """
